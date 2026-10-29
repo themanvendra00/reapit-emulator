@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Flat design tokens (consumed as Tailwind colors — see
+   tailwind.config.js `theme.extend.colors`, all wired to the CSS
+   variables below so every `bg-ink`/`text-inkmuted`/etc. class
+   repaints automatically when `.dark` is toggled on <html>).
+   canvas   page background
+   surface  shell / cards / table surface
+   mist     table header row, hover rows, subtle fills
+   line     1px borders
+   ink      primary text, primary buttons, active states
+   inkmuted secondary text
+   success/warning/danger/info/neutral — pill badge colour triplets
+   Flat design: no heavy shadows, separation comes from 1px borders.
+   ============================================================ */
+
+:root {
+  /* Fixed regardless of theme — solid-fill buttons/badges need a color that
+     never flips, otherwise bg-ink + text-white go white-on-white in dark mode. */
+  --c-accent: #0b0b0f;
+
+  --c-canvas: #efefef;
+  --c-surface: #ffffff;
+  --c-mist: #f7f7f8;
+  --c-line: #e8e8eb;
+  --c-rowline: #f0f0f2;
+  --c-ink: #0b0b0f;
+  --c-ink-muted: #8a8f98;
+
+  --c-success: #12b76a;
+  --c-success-bg: #ecfdf3;
+  --c-success-border: #a6f4c5;
+  --c-warning: #f79009;
+  --c-warning-bg: #fffaeb;
+  --c-warning-border: #fedf89;
+  --c-danger: #f04438;
+  --c-danger-bg: #fef3f2;
+  --c-danger-border: #fecdca;
+  --c-info: #7a5af8;
+  --c-info-bg: #f4f3ff;
+  --c-info-border: #d9d6fe;
+  --c-neutral: #475467;
+  --c-neutral-bg: #f2f4f7;
+  --c-neutral-border: #d0d5dd;
+}
+
+.dark {
+  --c-canvas: #0b0b0f;
+  --c-surface: #17171c;
+  --c-mist: #1f2026;
+  --c-line: #2a2b32;
+  --c-rowline: #24252b;
+  --c-ink: #f5f5f6;
+  --c-ink-muted: #9196a1;
+
+  --c-success: #3dd68c;
+  --c-success-bg: rgba(18, 183, 106, 0.16);
+  --c-success-border: rgba(61, 214, 140, 0.35);
+  --c-warning: #fdb022;
+  --c-warning-bg: rgba(247, 144, 9, 0.16);
+  --c-warning-border: rgba(253, 176, 34, 0.35);
+  --c-danger: #f97066;
+  --c-danger-bg: rgba(240, 68, 56, 0.16);
+  --c-danger-border: rgba(249, 112, 102, 0.35);
+  --c-info: #9b8afb;
+  --c-info-bg: rgba(122, 90, 248, 0.18);
+  --c-info-border: rgba(155, 138, 251, 0.4);
+  --c-neutral: #9aa4b2;
+  --c-neutral-bg: rgba(148, 163, 184, 0.14);
+  --c-neutral-border: rgba(154, 164, 178, 0.35);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-canvas text-ink antialiased;
+  font-feature-settings:
+    'cv11' 1,
+    'ss01' 1;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--c-ink);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-line);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
