@@ -1,12 +1,16 @@
-// Node.js Serverless Function proxy (NOT the Edge runtime — Vercel's Edge
-// environment refuses outbound fetches to a bare IP address with no
-// hostname, which is exactly what the emulator is). The app is served over
-// https, but the emulator only speaks plain http, so browsers block calling
-// it directly as mixed content. Routing API calls through this same-origin
-// function avoids that, and forwards the path/query/body exactly as
-// received (a vercel.json "rewrites" entry to an external URL 404s on any
-// request path ending in a trailing slash, which this app's list endpoints
-// always use, e.g. `/vendors/?pageSize=...`).
+// Node.js Serverless Function proxy. The app is served over https, but the
+// emulator only speaks plain http, so browsers block calling it directly as
+// mixed content. Routing API calls through this same-origin function avoids
+// that.
+//
+// This is deliberately NOT a bracket-named catch-all file (e.g.
+// `[...path].js`) — on this project that only ever matched a single path
+// segment (e.g. `/api/vendors` worked, `/api/vendors/VND011` 404'd before
+// even reaching the function). Instead, vercel.json rewrites every
+// `/api/:path*` request to this fixed function and injects the real
+// sub-path as a `rawpath` query param, which reliably preserves the full
+// path (including trailing slashes, e.g. `/vendors/?pageSize=...`) exactly
+// as the browser sent it.
 const BACKEND = 'http://13.201.189.21:3001';
 
 const DROP_REQUEST_HEADERS = new Set(['host', 'connection', 'content-length']);
@@ -18,8 +22,16 @@ const DROP_RESPONSE_HEADERS = new Set([
 ]);
 
 export default async function handler(req, res) {
-  const suffix = req.url.replace(/^\/api/, '');
-  const target = `${BACKEND}${suffix}`;
+  const { rawpath, ...rest } = req.query;
+
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(rest)) {
+    if (Array.isArray(value)) value.forEach((v) => qs.append(key, v));
+    else if (value !== undefined) qs.append(key, value);
+  }
+  const query = qs.toString();
+  const path = rawpath ? (Array.isArray(rawpath) ? rawpath.join('/') : rawpath) : '';
+  const target = `${BACKEND}/${path}${query ? `?${query}` : ''}`;
 
   const headers = {};
   for (const [key, value] of Object.entries(req.headers)) {
