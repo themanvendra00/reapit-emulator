@@ -1,7 +1,7 @@
 import { Loader2, SearchX } from 'lucide-react';
 import { Alert, AlertDescription, AlertAction } from './alert.jsx';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from './empty.jsx';
-import { Button } from './button.jsx';
+import { Button } from './Button.jsx';
 
 export function Spinner({ className = 'h-5 w-5' }) {
   return <Loader2 className={`animate-spin text-foreground ${className}`} />;
