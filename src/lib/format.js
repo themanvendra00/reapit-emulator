@@ -1,3 +1,31 @@
+// The emulator's data is all Irish (Dublin addresses, Irish negotiators), so
+// every date/time is shown and edited in Ireland time regardless of the
+// viewer's own browser timezone.
+const IRELAND_TZ = 'Europe/Dublin';
+
+// Given a real instant, returns how far (in ms) the wall-clock time in
+// `timeZone` is from UTC at that instant — e.g. +3_600_000 during Irish
+// summer time (IST, UTC+1), 0 during winter (GMT, UTC+0).
+function getTimeZoneOffsetMs(utcDate, timeZone) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+    .formatToParts(utcDate)
+    .reduce((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = Number(p.value);
+      return acc;
+    }, {});
+  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour % 24, parts.minute, parts.second);
+  return asUtc - utcDate.getTime();
+}
+
 export function formatAddress(address) {
   if (!address) return '—';
   return [
@@ -16,35 +44,64 @@ export function formatDate(value, opts = {}) {
   if (!value) return '—';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString(undefined, {
+  return new Intl.DateTimeFormat('en-IE', {
+    timeZone: IRELAND_TZ,
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     ...opts,
-  });
+  }).format(d);
 }
 
 export function formatDateTime(value) {
   if (!value) return '—';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString(undefined, {
+  return new Intl.DateTimeFormat('en-IE', {
+    timeZone: IRELAND_TZ,
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  });
+  }).format(d);
 }
 
+// Formats a UTC instant as the "YYYY-MM-DDTHH:MM" shape a
+// <input type="datetime-local"> needs — using Ireland's wall-clock time, not
+// the viewer's own browser timezone.
 export function toDateTimeLocalInput(value) {
   if (!value) return '';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: IRELAND_TZ,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .formatToParts(d)
+    .reduce((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = p.value;
+      return acc;
+    }, {});
+  return `${parts.year}-${parts.month}-${parts.day}T${String(Number(parts.hour) % 24).padStart(2, '0')}:${parts.minute}`;
+}
+
+// The inverse of toDateTimeLocalInput: takes the "YYYY-MM-DDTHH:MM" value out
+// of a datetime-local input — treated as Ireland wall-clock time — and
+// returns the matching UTC instant as an ISO string.
+export function dublinInputToIso(localValue) {
+  if (!localValue) return undefined;
+  const [datePart, timePart] = localValue.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = (timePart || '00:00').split(':').map(Number);
+  const naiveUtcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const offsetMs = getTimeZoneOffsetMs(new Date(naiveUtcMs), IRELAND_TZ);
+  return new Date(naiveUtcMs - offsetMs).toISOString();
 }
 
 export function formatCurrency(amount, currency = 'GBP') {
@@ -79,9 +136,15 @@ export function offerApplicantName(offer) {
 }
 
 export function attendeeNames(appointment) {
-  const contacts = appointment?.attendee?.contacts || [];
+  const attendee = appointment?.attendee;
+  if (!attendee) return '—';
+  // Older/seeded records inline the contact; the real appointments API just
+  // references an existing applicant/contact/vendor by id + type.
+  const contacts = attendee.contacts || [];
   const names = contacts.map((c) => c.name).filter(Boolean);
-  return names.length ? names.join(', ') : '—';
+  if (names.length) return names.join(', ');
+  if (attendee.id) return `${titleCase(attendee.type) || 'Attendee'} ${attendee.id}`;
+  return '—';
 }
 
 export function titleCase(value) {

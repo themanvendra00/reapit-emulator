@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import {
   useCreateViewing,
   usePropertyViewings,
@@ -11,8 +11,17 @@ import Badge from '../../../components/ui/Badge.jsx';
 import Modal from '../../../components/ui/Modal.jsx';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog.jsx';
 import { Input, Label, Select, Textarea } from '../../../components/ui/Field.jsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table.jsx';
 import { FullPageSpinner, ErrorBanner, EmptyState } from '../../../components/ui/Feedback.jsx';
-import { attendeeNames, formatDateTime, toDateTimeLocalInput } from '../../../lib/format.js';
+import {
+  attendeeNames,
+  dublinInputToIso,
+  formatDateTime,
+  titleCase,
+  toDateTimeLocalInput,
+} from '../../../lib/format.js';
+
+const ATTENDEE_TYPES = ['applicant', 'vendor', 'landlord', 'tenant', 'buyer', 'contact'];
 
 export default function ViewingsTab({ propertyId }) {
   const { data, isLoading, isError, error, refetch } = usePropertyViewings(propertyId);
@@ -49,31 +58,31 @@ export default function ViewingsTab({ propertyId }) {
       ) : data.items.length === 0 ? (
         <EmptyState title="No viewings booked" message="Book a viewing appointment for this property." />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-flat">
-          <table className="w-full text-sm">
-            <thead className="h-10 border-b border-line bg-mist text-left text-xs font-medium text-inkmuted">
-              <tr>
-                <th className="px-4 font-medium">Start</th>
-                <th className="px-4 font-medium">End</th>
-                <th className="px-4 font-medium">Attendee</th>
-                <th className="px-4 font-medium">Status</th>
-                <th className="px-4 font-medium" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-rowline">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+          <Table>
+            <TableHeader className="bg-muted">
+              <TableRow>
+                <TableHead className="h-10 px-4">Start</TableHead>
+                <TableHead className="px-4">End</TableHead>
+                <TableHead className="px-4">Attendee</TableHead>
+                <TableHead className="px-4">Status</TableHead>
+                <TableHead className="px-4" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.items.map((viewing) => (
-                <tr key={viewing.id} className="hover:bg-mist">
-                  <td className="px-4 py-3 whitespace-nowrap text-[13px] font-medium text-ink">{formatDateTime(viewing.start)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-[13px] text-inkmuted">{formatDateTime(viewing.end)}</td>
-                  <td className="px-4 py-3 text-[13px] text-inkmuted">{attendeeNames(viewing)}</td>
-                  <td className="px-4 py-3">
+                <TableRow key={viewing.id}>
+                  <TableCell className="px-4 py-3 text-[13px] font-medium text-foreground">{formatDateTime(viewing.start)}</TableCell>
+                  <TableCell className="px-4 py-3 text-[13px] text-muted-foreground">{formatDateTime(viewing.end)}</TableCell>
+                  <TableCell className="px-4 py-3 text-[13px] text-muted-foreground">{attendeeNames(viewing)}</TableCell>
+                  <TableCell className="px-4 py-3">
                     {viewing.cancelled ? (
                       <Badge color="danger">Cancelled</Badge>
                     ) : (
                       <Badge color="success">Confirmed</Badge>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <Button size="sm" variant="secondary" onClick={() => setEditingViewing(viewing)}>
                         Edit
@@ -89,11 +98,11 @@ export default function ViewingsTab({ propertyId }) {
                         </Button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -139,8 +148,16 @@ function ViewingFormModal({ mode, propertyId, viewing, open, onClose }) {
       setForm({
         start: toDateTimeLocalInput(viewing.start),
         end: toDateTimeLocalInput(viewing.end),
+        followUpOn: viewing.followUpOn || '',
         negotiatorId: (viewing.negotiatorIds || [])[0] || '',
         description: viewing.description || '',
+        accompanied: viewing.accompanied ?? true,
+        virtual: viewing.virtual ?? false,
+        attendeeType: viewing.attendee?.type || 'applicant',
+        attendeeId: viewing.attendee?.id || '',
+        negotiatorConfirmed: viewing.negotiatorConfirmed ?? true,
+        attendeeConfirmed: viewing.attendeeConfirmed ?? false,
+        propertyConfirmed: viewing.propertyConfirmed ?? true,
       });
     } else if (!isEdit && open) {
       setForm(emptyForm());
@@ -155,8 +172,16 @@ function ViewingFormModal({ mode, propertyId, viewing, open, onClose }) {
     return {
       start: toDateTimeLocalInput(start.toISOString()),
       end: toDateTimeLocalInput(end.toISOString()),
+      followUpOn: '',
       negotiatorId: '',
       description: '',
+      accompanied: true,
+      virtual: false,
+      attendeeType: 'applicant',
+      attendeeId: '',
+      negotiatorConfirmed: true,
+      attendeeConfirmed: false,
+      propertyConfirmed: true,
     };
   }
 
@@ -165,11 +190,26 @@ function ViewingFormModal({ mode, propertyId, viewing, open, onClose }) {
       toast.error('Start and end time are required');
       return;
     }
+    const negotiator = (negotiators?.items || []).find((n) => n.id === form.negotiatorId);
+
     const body = {
-      start: new Date(form.start).toISOString(),
-      end: new Date(form.end).toISOString(),
+      start: dublinInputToIso(form.start),
+      end: dublinInputToIso(form.end),
+      followUpOn: form.followUpOn || undefined,
       description: form.description || undefined,
       negotiatorIds: form.negotiatorId ? [form.negotiatorId] : undefined,
+      organiserId: form.negotiatorId || undefined,
+      officeIds: negotiator?.officeId ? [negotiator.officeId] : undefined,
+      accompanied: form.accompanied,
+      virtual: form.virtual,
+      cancelled: false,
+      recurrence: { interval: 0, type: null, until: null },
+      negotiatorConfirmed: form.negotiatorConfirmed,
+      attendeeConfirmed: form.attendeeConfirmed,
+      propertyConfirmed: form.propertyConfirmed,
+      attendee: form.attendeeId.trim()
+        ? { id: form.attendeeId.trim(), type: form.attendeeType }
+        : undefined,
     };
     try {
       if (isEdit) {
@@ -222,6 +262,7 @@ function ViewingFormModal({ mode, propertyId, viewing, open, onClose }) {
             />
           </div>
         </div>
+        <p className="-mt-2 text-xs text-muted-foreground">Times are shown and saved in Irish time (Europe/Dublin).</p>
         <div>
           <Label htmlFor="negotiatorId">Negotiator</Label>
           <Select
@@ -237,6 +278,117 @@ function ViewingFormModal({ mode, propertyId, viewing, open, onClose }) {
             ))}
           </Select>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="attendeeType">Attendee type</Label>
+            <Select
+              id="attendeeType"
+              value={form.attendeeType}
+              onChange={(e) => setForm({ ...form, attendeeType: e.target.value })}
+            >
+              {ATTENDEE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {titleCase(t)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="attendeeId">Attendee ID</Label>
+            <Input
+              id="attendeeId"
+              value={form.attendeeId}
+              onChange={(e) => setForm({ ...form, attendeeId: e.target.value })}
+              placeholder="e.g. OXF20001"
+            />
+          </div>
+        </div>
+        <div>
+          <Label htmlFor="followUpOn">Follow up on</Label>
+          <Input
+            id="followUpOn"
+            type="date"
+            value={form.followUpOn}
+            onChange={(e) => setForm({ ...form, followUpOn: e.target.value })}
+          />
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <input
+              id="accompanied"
+              type="checkbox"
+              checked={form.accompanied}
+              onChange={(e) => setForm({ ...form, accompanied: e.target.checked })}
+              className="h-4 w-4 rounded border-border text-foreground focus:ring-ring/30"
+            />
+            <Label htmlFor="accompanied">Negotiator accompanying</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              id="virtual"
+              type="checkbox"
+              checked={form.virtual}
+              onChange={(e) => setForm({ ...form, virtual: e.target.checked })}
+              className="h-4 w-4 rounded border-border text-foreground focus:ring-ring/30"
+            />
+            <Label htmlFor="virtual">Virtual viewing</Label>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-muted/40 p-3">
+          <div className="flex items-center gap-2">
+            <input
+              id="allConfirmed"
+              type="checkbox"
+              checked={form.negotiatorConfirmed && form.attendeeConfirmed && form.propertyConfirmed}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setForm({
+                  ...form,
+                  negotiatorConfirmed: checked,
+                  attendeeConfirmed: checked,
+                  propertyConfirmed: checked,
+                });
+              }}
+              className="h-4 w-4 rounded border-border text-foreground focus:ring-ring/30"
+            />
+            <Label htmlFor="allConfirmed" className="font-semibold">All confirmed</Label>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2 border-t border-border pt-2">
+            <div className="flex items-center gap-2">
+              <input
+                id="negotiatorConfirmed"
+                type="checkbox"
+                checked={form.negotiatorConfirmed}
+                onChange={(e) => setForm({ ...form, negotiatorConfirmed: e.target.checked })}
+                className="h-4 w-4 rounded border-border text-foreground focus:ring-ring/30"
+              />
+              <Label htmlFor="negotiatorConfirmed">Negotiator</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="attendeeConfirmed"
+                type="checkbox"
+                checked={form.attendeeConfirmed}
+                onChange={(e) => setForm({ ...form, attendeeConfirmed: e.target.checked })}
+                className="h-4 w-4 rounded border-border text-foreground focus:ring-ring/30"
+              />
+              <Label htmlFor="attendeeConfirmed">Attendee</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="propertyConfirmed"
+                type="checkbox"
+                checked={form.propertyConfirmed}
+                onChange={(e) => setForm({ ...form, propertyConfirmed: e.target.checked })}
+                className="h-4 w-4 rounded border-border text-foreground focus:ring-ring/30"
+              />
+              <Label htmlFor="propertyConfirmed">Property</Label>
+            </div>
+          </div>
+        </div>
+
         <div>
           <Label htmlFor="description">Notes</Label>
           <Textarea

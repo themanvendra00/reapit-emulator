@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Input, Label, Select } from '../../components/ui/Field.jsx';
 import { Spinner } from '../../components/ui/Feedback.jsx';
 import { useUpdateVendor, useVendor } from '../../features/vendors/api.js';
 import {
+  dublinInputToIso,
   formatDate,
   toDateTimeLocalInput,
   vendorDisplayName,
@@ -41,8 +42,8 @@ export default function VendorEditModal({ vendorId, onClose }) {
       typeId: form.typeId || undefined,
       sellingReasonId: form.sellingReasonId || undefined,
       solicitorId: form.solicitorId || undefined,
-      lastCall: form.lastCall ? new Date(form.lastCall).toISOString() : undefined,
-      nextCall: form.nextCall ? new Date(form.nextCall).toISOString() : undefined,
+      lastCall: form.lastCall ? dublinInputToIso(form.lastCall) : undefined,
+      nextCall: form.nextCall ? dublinInputToIso(form.nextCall) : undefined,
     };
     try {
       await updateVendor.mutateAsync({ id: vendorId, body, etag: vendor._eTag });
@@ -71,28 +72,28 @@ export default function VendorEditModal({ vendorId, onClose }) {
         )
       }
     >
-      {isLoading || !form ? (
+      {isLoading || !vendor || !form ? (
         <div className="flex justify-center py-10">
           <Spinner />
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-line bg-mist p-3 text-xs text-inkmuted">
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-muted p-3 text-xs text-muted-foreground">
             <div>
-              <div className="font-medium text-inkmuted">Vendor ID</div>
-              <div className="font-mono text-ink">{vendor.id}</div>
+              <div className="font-medium text-muted-foreground">Vendor ID</div>
+              <div className="font-mono text-foreground">{vendor.id}</div>
             </div>
             <div>
-              <div className="font-medium text-inkmuted">Email</div>
-              <div className="text-ink">{vendorEmail(vendor) || '—'}</div>
+              <div className="font-medium text-muted-foreground">Email</div>
+              <div className="text-foreground">{vendorEmail(vendor) || '—'}</div>
             </div>
             <div>
-              <div className="font-medium text-inkmuted">Created</div>
-              <div className="text-ink">{formatDate(vendor.created)}</div>
+              <div className="font-medium text-muted-foreground">Created</div>
+              <div className="text-foreground">{formatDate(vendor.created)}</div>
             </div>
             <div>
-              <div className="font-medium text-inkmuted">Negotiator</div>
-              <div className="text-ink">{vendor.negotiatorId || '—'}</div>
+              <div className="font-medium text-muted-foreground">Negotiator</div>
+              <div className="text-foreground">{vendor.negotiatorId || '—'}</div>
             </div>
           </div>
 

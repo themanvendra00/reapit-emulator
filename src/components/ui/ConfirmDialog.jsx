@@ -1,5 +1,15 @@
-import Modal from './Modal.jsx';
-import Button from './Button.jsx';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './alert-dialog.jsx';
+
+const VARIANT_ALIASES = { danger: 'destructive', primary: 'default' };
 
 export default function ConfirmDialog({
   open,
@@ -12,23 +22,28 @@ export default function ConfirmDialog({
   onClose,
 }) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      size="sm"
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>
+    <AlertDialog open={open} onOpenChange={(next) => !next && onClose?.()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{message}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={loading} onClick={onClose}>
             Cancel
-          </Button>
-          <Button variant={variant} onClick={onConfirm} loading={loading}>
-            {confirmLabel}
-          </Button>
-        </>
-      }
-    >
-      <p className="text-sm text-ink">{message}</p>
-    </Modal>
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant={VARIANT_ALIASES[variant] || variant}
+            disabled={loading}
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirm?.();
+            }}
+          >
+            {loading ? 'Please wait…' : confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

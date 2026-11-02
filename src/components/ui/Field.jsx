@@ -1,33 +1,52 @@
-export function Label({ children, htmlFor }) {
+import { Children, isValidElement } from 'react';
+import { Label as ShadLabel } from './label.jsx';
+import { Input as ShadInput } from './input.jsx';
+import { Textarea as ShadTextarea } from './textarea.jsx';
+import {
+  Select as ShadSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './select.jsx';
+
+export function Label({ children, htmlFor, className = '' }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1 block text-xs font-semibold text-ink">
+    <ShadLabel htmlFor={htmlFor} className={`mb-1.5 ${className}`}>
       {children}
-    </label>
+    </ShadLabel>
   );
 }
 
-const baseInput =
-  'w-full h-10 rounded-xl border border-line bg-surface px-3 text-sm text-ink shadow-none placeholder:text-inkmuted focus:border-ink focus:outline-none focus:ring-[3px] focus:ring-ink/10 disabled:bg-mist disabled:text-inkmuted';
-
 export function Input({ className = '', ...props }) {
-  return <input className={`${baseInput} ${className}`} {...props} />;
+  return <ShadInput className={`h-10 ${className}`} {...props} />;
 }
 
 export function Textarea({ className = '', rows = 3, ...props }) {
-  return (
-    <textarea
-      rows={rows}
-      className={`${baseInput} h-auto py-2 ${className}`}
-      {...props}
-    />
-  );
+  return <ShadTextarea rows={rows} className={className} {...props} />;
 }
 
-export function Select({ className = '', children, ...props }) {
+// Keeps the plain <option>-children API the rest of the app already uses,
+// backed by the shadcn/Radix Select underneath.
+export function Select({ id, value, onChange, children, className = '', disabled, placeholder = 'Select…' }) {
+  const options = Children.toArray(children).filter(isValidElement);
   return (
-    <select className={`${baseInput} ${className}`} {...props}>
-      {children}
-    </select>
+    <ShadSelect
+      value={value != null ? String(value) : undefined}
+      onValueChange={(next) => onChange?.({ target: { value: next } })}
+      disabled={disabled}
+    >
+      <SelectTrigger id={id} className={`h-10 w-full ${className}`}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((opt) => (
+          <SelectItem key={opt.props.value} value={String(opt.props.value)}>
+            {opt.props.children}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </ShadSelect>
   );
 }
 
@@ -36,7 +55,7 @@ export function FieldGroup({ label, children, htmlFor, hint }) {
     <div>
       {label && <Label htmlFor={htmlFor}>{label}</Label>}
       {children}
-      {hint && <p className="mt-1 text-xs text-inkmuted">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import {
   useCreatePropertyCheck,
   useDeletePropertyCheck,
@@ -11,6 +11,7 @@ import Badge from '../../../components/ui/Badge.jsx';
 import Modal from '../../../components/ui/Modal.jsx';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog.jsx';
 import { Input, Label, Select } from '../../../components/ui/Field.jsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table.jsx';
 import { FullPageSpinner, ErrorBanner, EmptyState } from '../../../components/ui/Feedback.jsx';
 import { formatDate, titleCase } from '../../../lib/format.js';
 
@@ -60,26 +61,26 @@ export default function ChecksTab({ propertyId }) {
       ) : data.items.length === 0 ? (
         <EmptyState title="No checks recorded" message="Add a pre-instruction check to get started." />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-flat">
-          <table className="w-full text-sm">
-            <thead className="h-10 border-b border-line bg-mist text-left text-xs font-medium text-inkmuted">
-              <tr>
-                <th className="px-4 font-medium">Description</th>
-                <th className="px-4 font-medium">Type</th>
-                <th className="px-4 font-medium">Status</th>
-                <th className="px-4 font-medium">Updated</th>
-                <th className="px-4 font-medium" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-rowline">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+          <Table>
+            <TableHeader className="bg-muted">
+              <TableRow>
+                <TableHead className="h-10 px-4">Description</TableHead>
+                <TableHead className="px-4">Type</TableHead>
+                <TableHead className="px-4">Status</TableHead>
+                <TableHead className="px-4">Updated</TableHead>
+                <TableHead className="px-4" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.items.map((check) => {
                 const currentStatus = pendingStatus[check.id] ?? check.status;
                 const dirty = currentStatus !== check.status;
                 return (
-                  <tr key={check.id} className="hover:bg-mist">
-                    <td className="px-4 py-3 text-[13px] font-medium text-ink">{check.description}</td>
-                    <td className="px-4 py-3 text-[13px] text-inkmuted">{titleCase(check.type)}</td>
-                    <td className="px-4 py-3">
+                  <TableRow key={check.id}>
+                    <TableCell className="px-4 py-3 text-[13px] font-medium text-foreground">{check.description}</TableCell>
+                    <TableCell className="px-4 py-3 text-[13px] text-muted-foreground">{titleCase(check.type)}</TableCell>
+                    <TableCell className="px-4 py-3">
                       <Select
                         className="w-36"
                         value={currentStatus}
@@ -93,9 +94,9 @@ export default function ChecksTab({ propertyId }) {
                           </option>
                         ))}
                       </Select>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-[13px] text-inkmuted">{formatDate(check.modified)}</td>
-                    <td className="px-4 py-3 text-right">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-[13px] text-muted-foreground">{formatDate(check.modified)}</TableCell>
+                    <TableCell className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         {dirty && (
                           <Button
@@ -115,12 +116,12 @@ export default function ChecksTab({ propertyId }) {
                           Delete
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

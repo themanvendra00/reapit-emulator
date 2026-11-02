@@ -1,0 +1,2627 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Courtside — Tennis Video Analysis & Coaching</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* CSS RESET & SYSTEM VARIABLES */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg-app: #0f1419;
+        --surface-1: #171d24;
+        --surface-2: #202833;
+        --surface-hover: #293340;
+        --border-subtle: #2a3441;
+        --text-primary: #f5f7fa;
+        --text-secondary: #9ba8b7;
+        --text-disabled: #586574;
+        --accent-primary: #d4f23c; /* Optic yellow */
+        --accent-clay: #e4713a;
+        --status-won: #2ecc71;
+        --status-lost: #ff5a5f;
+        --status-unknown: #e0a93b;
+        --radius-sm: 6px;
+        --radius-md: 12px;
+        --radius-pill: 9999px;
+        --font-stack: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+
+      body {
+        background-color: #07090c;
+        color: var(--text-primary);
+        font-family: var(--font-stack);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* GLOBAL SIMULATOR SHELL BAR */
+      .simulator-bar {
+        width: 100%;
+        max-width: 1440px;
+        background: var(--surface-1);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 10px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-size: 13px;
+      }
+      .flow-steps {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .flow-btn {
+        background: var(--surface-2);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-subtle);
+        padding: 6px 12px;
+        border-radius: var(--radius-pill);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: all 150ms ease;
+      }
+      .flow-btn:hover,
+      .flow-btn.active {
+        background: var(--accent-primary);
+        color: #000;
+        border-color: var(--accent-primary);
+        font-weight: 600;
+      }
+      .device-toggles {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      /* MAIN VIEWPORT CONTAINER */
+      #viewport-container {
+        width: 100%;
+        max-width: 1440px;
+        height: 860px;
+        background: var(--bg-app);
+        border: 1px solid var(--border-subtle);
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        transition:
+          width 250ms ease,
+          height 250ms ease;
+      }
+
+      /* MOBILE SIMULATOR FRAME */
+      #viewport-container.mobile-mode {
+        width: 390px;
+        height: 844px;
+        border: 10px solid #202833;
+        border-radius: 44px;
+      }
+
+      /* SHARED APP HEADER */
+      .app-header {
+        height: 64px;
+        background: var(--surface-1);
+        border-bottom: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        flex-shrink: 0;
+      }
+      .brand-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: -0.02em;
+        cursor: pointer;
+      }
+      .ball-icon {
+        width: 22px;
+        height: 22px;
+        background: var(--accent-primary);
+        border-radius: 50%;
+        position: relative;
+        border: 2px solid #0f1419;
+      }
+      .ball-icon::after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border: 2px solid #0f1419;
+        border-radius: 50%;
+        top: -4px;
+        left: 2px;
+        clip-path: inset(10% 20% 10% 20%);
+      }
+
+      /* BUTTONS & CONTROLS */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        border: 1px solid transparent;
+        min-height: 40px;
+        transition: background 150ms ease;
+        font-family: inherit;
+      }
+      .btn-primary {
+        background: var(--accent-primary);
+        color: #000;
+      }
+      .btn-primary:hover {
+        background: #c0de2f;
+      }
+      .btn-secondary {
+        background: var(--surface-2);
+        color: var(--text-primary);
+        border-color: var(--border-subtle);
+      }
+      .btn-secondary:hover {
+        background: var(--surface-hover);
+      }
+      .btn-clay {
+        background: var(--accent-clay);
+        color: #fff;
+      }
+      .btn-danger {
+        background: rgba(255, 90, 95, 0.15);
+        color: var(--status-lost);
+        border-color: var(--status-lost);
+      }
+
+      /* VIEW SCREENS */
+      .screen-view {
+        flex: 1;
+        display: none;
+        flex-direction: column;
+        overflow-y: auto;
+        background: var(--bg-app);
+        position: relative;
+      }
+      .screen-view.active {
+        display: flex;
+      }
+
+      /* VIEW 1: SIGN IN */
+      .auth-container {
+        margin: auto;
+        width: 100%;
+        max-width: 400px;
+        background: var(--surface-1);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .form-group label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+      .form-group input {
+        background: var(--surface-2);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+        color: #fff;
+        font-family: inherit;
+        outline: none;
+      }
+      .form-group input:focus {
+        border-color: var(--accent-primary);
+      }
+
+      /* VIEW 2: MATCH LIBRARY */
+      .library-content {
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .match-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 20px;
+      }
+      .match-lib-card {
+        background: var(--surface-1);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        cursor: pointer;
+        transition:
+          transform 150ms ease,
+          border-color 150ms ease;
+      }
+      .match-lib-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent-primary);
+      }
+      .card-thumb-banner {
+        width: 100%;
+        height: 180px;
+        background: #111a24;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .thumb-tennis-court {
+        width: 80%;
+        height: 75%;
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        position: relative;
+        background: #19442e; /* green court */
+      }
+      .court-net-line {
+        position: absolute;
+        top: 50%;
+        width: 100%;
+        height: 2px;
+        background: #fff;
+        transform: translateY(-50%);
+      }
+      .card-details {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      /* VIEW 3: UPLOAD MODAL */
+      .dropzone-box {
+        border: 2px dashed var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 40px;
+        text-align: center;
+        background: var(--surface-1);
+        margin: 28px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+      }
+      .dropzone-box:hover {
+        border-color: var(--accent-primary);
+      }
+
+      /* VIEW 4: PROCESSING */
+      .processing-stepper {
+        max-width: 600px;
+        margin: 60px auto;
+        background: var(--surface-1);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .step-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .step-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--surface-2);
+        color: var(--text-secondary);
+      }
+      .step-item.done .step-dot {
+        background: var(--status-won);
+        color: #fff;
+      }
+      .step-item.active .step-dot {
+        background: var(--accent-primary);
+        color: #000;
+      }
+
+      /* VIEW 5: MATCH OVERVIEW (HERO) */
+      .overview-container {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .match-header-strip {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--surface-1);
+        border: 1px solid var(--border-subtle);
+        padding: 18px 24px;
+        border-radius: var(--radius-md);
+      }
+      .quadrant-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .quad-card {
+        background: var(--surface-1);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        transition: all 150ms ease;
+      }
+      .quad-card:hover {
+        border-color: var(--accent-primary);
+        transform: translateY(-2px);
+      }
+      .segmented-bar {
+        height: 10px;
+        width: 100%;
+        background: var(--surface-2);
+        border-radius: var(--radius-pill);
+        display: flex;
+        overflow: hidden;
+      }
+      .seg-won {
+        background: var(--status-won);
+        height: 100%;
+      }
+      .seg-lost {
+        background: var(--status-lost);
+        height: 100%;
+      }
+      .seg-unknown {
+        background: var(--status-unknown);
+        height: 100%;
+      }
+      .stat-badge-row {
+        display: flex;
+        gap: 12px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      /* VIEW 6: GROUP VIEW */
+      .group-view-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .player-dock-top {
+        height: 340px;
+        background: #000;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .point-grid-scroll {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+        padding-bottom: 90px; /* Space for sticky bar */
+      }
+      .point-card {
+        background: var(--surface-1);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+        transition: border-color 150ms;
+      }
+      .point-card.selected {
+        border-color: var(--accent-primary);
+        background: #1e2615;
+      }
+      .point-card-thumb {
+        height: 120px;
+        background: #111a24;
+        position: relative;
+      }
+      .point-card-body {
+        padding: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .sticky-action-dock {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--surface-2);
+        border: 1px solid var(--accent-primary);
+        border-radius: var(--radius-pill);
+        padding: 10px 24px;
+        display: none;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        z-index: 100;
+      }
+      .sticky-action-dock.visible {
+        display: flex;
+      }
+
+      /* VIEW 8: COACHING STUDIO (HERO) */
+      .studio-layout {
+        display: flex;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        position: relative;
+      }
+      .studio-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #000;
+        position: relative;
+        overflow: hidden;
+      }
+      .canvas-viewport {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        background: #080c10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: crosshair;
+      }
+      #annotationCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 20;
+      }
+      .court-render-bg {
+        width: 85%;
+        height: 80%;
+        background: #1b4931;
+        border: 3px solid rgba(255, 255, 255, 0.7);
+        position: relative;
+        pointer-events: none;
+        transform-origin: center center;
+        transition: transform 200ms ease;
+      }
+      .service-box-left {
+        position: absolute;
+        top: 25%;
+        bottom: 25%;
+        left: 20%;
+        width: 30%;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+      }
+      .service-box-right {
+        position: absolute;
+        top: 25%;
+        bottom: 25%;
+        right: 20%;
+        width: 30%;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+      }
+      .net-line-studio {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 3px;
+        background: #fff;
+      }
+      .minimap-overlay {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 140px;
+        height: 85px;
+        background: rgba(15, 20, 25, 0.85);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        z-index: 40;
+        display: none;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .minimap-frustum {
+        position: absolute;
+        border: 2px solid var(--accent-primary);
+        background: rgba(212, 242, 60, 0.15);
+        width: 50%;
+        height: 50%;
+        top: 25%;
+        left: 25%;
+      }
+      .studio-toolbar {
+        height: 60px;
+        background: var(--surface-1);
+        border-top: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 30;
+        flex-shrink: 0;
+      }
+      .tool-group {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .tool-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: var(--radius-sm);
+        background: var(--surface-2);
+        color: var(--text-primary);
+        border: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 150ms ease;
+      }
+      .tool-btn.active,
+      .tool-btn:hover {
+        background: var(--accent-primary);
+        color: #000;
+        border-color: var(--accent-primary);
+      }
+      .swatch-group {
+        display: flex;
+        gap: 6px;
+        padding: 0 8px;
+        border-left: 1px solid var(--border-subtle);
+        border-right: 1px solid var(--border-subtle);
+      }
+      .swatch {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+      }
+      .swatch.selected {
+        border-color: #fff;
+        transform: scale(1.15);
+      }
+      .record-pill-btn {
+        background: #e53935;
+        color: #fff;
+        border-radius: var(--radius-pill);
+        padding: 8px 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        animation: none;
+      }
+      .record-pill-btn.recording {
+        animation: pulse-red 1.2s infinite;
+        background: #b71c1c;
+      }
+      @keyframes pulse-red {
+        0% {
+          box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 12px rgba(229, 57, 53, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(229, 57, 53, 0);
+        }
+      }
+
+      .studio-sidebar {
+        width: 320px;
+        background: var(--surface-1);
+        border-left: 1px solid var(--border-subtle);
+        display: flex;
+        flex-direction: column;
+        z-index: 30;
+        flex-shrink: 0;
+      }
+      .sidebar-clip-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .clip-row-item {
+        background: var(--surface-2);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      /* VIEW 10: SHARE MODAL */
+      .modal-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(4px);
+        z-index: 200;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-backdrop.open {
+        display: flex;
+      }
+      .share-modal-card {
+        width: 480px;
+        background: var(--surface-1);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .share-url-box {
+        display: flex;
+        background: var(--surface-2);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .share-url-box input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 10px 14px;
+        color: #fff;
+        font-size: 13px;
+        outline: none;
+      }
+
+      /* VIEW 11: STUDENT VIEW (MOBILE) */
+      .student-view-wrap {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: #000;
+      }
+      .student-player {
+        width: 100%;
+        height: 240px;
+        background: #111a24;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .student-body {
+        flex: 1;
+        background: var(--bg-app);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .coach-avatar-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .coach-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        color: #000;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* SEMANTIC CHIPS */
+      .badge-won {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(46, 204, 113, 0.15);
+        color: var(--status-won);
+        padding: 4px 8px;
+        border-radius: var(--radius-pill);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .badge-lost {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(255, 90, 95, 0.15);
+        color: var(--status-lost);
+        padding: 4px 8px;
+        border-radius: var(--radius-pill);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .badge-unknown {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(224, 169, 59, 0.15);
+        color: var(--status-unknown);
+        padding: 4px 8px;
+        border-radius: var(--radius-pill);
+        font-size: 11px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- SIMULATOR CONTROL BAR -->
+    <div class="simulator-bar">
+      <div class="flow-steps">
+        <span
+          style="
+            color: var(--text-secondary);
+            margin-right: 6px;
+            font-weight: 600;
+          "
+          >Interactive Prototype Flow:</span
+        >
+        <button
+          class="flow-btn active"
+          onclick="switchView('screen-auth', this)"
+        >
+          1. Sign In
+        </button>
+        <button class="flow-btn" onclick="switchView('screen-library', this)">
+          2. Library
+        </button>
+        <button class="flow-btn" onclick="switchView('screen-upload', this)">
+          3. Upload
+        </button>
+        <button
+          class="flow-btn"
+          onclick="switchView('screen-processing', this)"
+        >
+          4. Processing
+        </button>
+        <button class="flow-btn" onclick="switchView('screen-overview', this)">
+          5. Match Overview
+        </button>
+        <button class="flow-btn" onclick="switchView('screen-group', this)">
+          6. Group View
+        </button>
+        <button class="flow-btn" onclick="switchView('screen-studio', this)">
+          7. Coaching Studio
+        </button>
+        <button class="flow-btn" onclick="openShareModal()">
+          8. Share Modal
+        </button>
+        <button class="flow-btn" onclick="switchView('screen-student', this)">
+          9. Student Mobile
+        </button>
+      </div>
+      <div class="device-toggles">
+        <button
+          class="btn btn-secondary"
+          style="min-height: 30px; font-size: 12px"
+          onclick="setDeviceMode('desktop')"
+        >
+          💻 Desktop (1440px)
+        </button>
+        <button
+          class="btn btn-secondary"
+          style="min-height: 30px; font-size: 12px"
+          onclick="setDeviceMode('mobile')"
+        >
+          📱 Mobile View
+        </button>
+      </div>
+    </div>
+
+    <!-- APPLICATION VIEWPORT -->
+    <div id="viewport-container">
+      <!-- COMMON APP HEADER (Hidden in Student Mobile Mode) -->
+      <header class="app-header" id="appHeader">
+        <div class="brand-logo" onclick="switchView('screen-library')">
+          <div class="ball-icon"></div>
+          <span>Courtside</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px">
+          <span style="font-size: 13px; color: var(--text-secondary)"
+            >Coach David K.</span
+          >
+          <div
+            style="
+              width: 34px;
+              height: 34px;
+              border-radius: 50%;
+              background: var(--surface-2);
+              border: 1px solid var(--border-subtle);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 600;
+              font-size: 13px;
+            "
+          >
+            DK
+          </div>
+        </div>
+      </header>
+
+      <!-- SCREEN 1: SIGN IN -->
+      <div id="screen-auth" class="screen-view active">
+        <div class="auth-container">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <div class="ball-icon"></div>
+            <span style="font-weight: 700; font-size: 20px">Courtside</span>
+          </div>
+          <div>
+            <h2 style="font-size: 18px; margin-bottom: 4px">
+              Sign in to your account
+            </h2>
+            <p style="font-size: 13px; color: var(--text-secondary)">
+              Upload matches, review points, teach in minutes.
+            </p>
+          </div>
+          <button
+            class="btn btn-secondary"
+            style="width: 100%; justify-content: center"
+            onclick="switchView('screen-library')"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path
+                fill="currentColor"
+                d="M21.35 11.1h-9.17v2.73h5.51c-.33 1.8-1.92 3.28-4.14 3.28-2.49 0-4.5-2.01-4.5-4.5s2.01-4.5 4.5-4.5c1.15 0 2.18.42 2.97 1.15l2.06-2.06C16.8 5.68 14.65 4.8 12.19 4.8 7.78 4.8 4.2 8.38 4.2 12.8s3.58 8 7.99 8c4.61 0 7.66-3.24 7.66-7.8 0-.58-.06-1.14-.15-1.7z"
+              />
+            </svg>
+            Continue with Google
+          </button>
+          <div
+            style="
+              text-align: center;
+              font-size: 11px;
+              color: var(--text-secondary);
+              text-transform: uppercase;
+            "
+          >
+            or email
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" value="david@tenniselevate.com" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" value="••••••••••••" />
+          </div>
+          <button
+            class="btn btn-primary"
+            style="width: 100%"
+            onclick="switchView('screen-library')"
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+
+      <!-- SCREEN 2: LIBRARY -->
+      <div id="screen-library" class="screen-view">
+        <div class="library-content">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <div>
+              <h1 style="font-size: 24px; font-weight: 700">Match Library</h1>
+              <p style="font-size: 13px; color: var(--text-secondary)">
+                Organized video library across all students
+              </p>
+            </div>
+            <button
+              class="btn btn-primary"
+              onclick="switchView('screen-upload')"
+            >
+              + Upload Match
+            </button>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              gap: 12px;
+              border-bottom: 1px solid var(--border-subtle);
+              padding-bottom: 12px;
+            "
+          >
+            <span
+              style="
+                font-weight: 600;
+                color: var(--accent-primary);
+                border-bottom: 2px solid var(--accent-primary);
+                padding-bottom: 10px;
+                cursor: pointer;
+              "
+              >Matches (14)</span
+            >
+            <span style="color: var(--text-secondary); cursor: pointer"
+              >Lessons (6)</span
+            >
+            <span style="color: var(--text-secondary); cursor: pointer"
+              >Pattern Sets (9)</span
+            >
+          </div>
+
+          <div class="match-card-grid">
+            <!-- Card 1 -->
+            <div class="match-lib-card" onclick="switchView('screen-overview')">
+              <div class="card-thumb-banner">
+                <div class="thumb-tennis-court">
+                  <div class="court-net-line"></div>
+                </div>
+                <span
+                  style="
+                    position: absolute;
+                    bottom: 8px;
+                    right: 8px;
+                    background: rgba(0, 0, 0, 0.8);
+                    font-size: 11px;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-weight: 600;
+                  "
+                  >60 Points</span
+                >
+              </div>
+              <div class="card-details">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: start;
+                  "
+                >
+                  <h3 style="font-size: 15px; font-weight: 600">
+                    Alex M. vs David K.
+                  </h3>
+                  <span class="badge-won">Ready</span>
+                </div>
+                <p style="font-size: 12px; color: var(--text-secondary)">
+                  Oct 28 · Singles · Near Player POV
+                </p>
+                <div class="segmented-bar">
+                  <div class="seg-won" style="width: 58%"></div>
+                  <div class="seg-lost" style="width: 32%"></div>
+                  <div class="seg-unknown" style="width: 10%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div
+              class="match-lib-card"
+              onclick="switchView('screen-processing')"
+            >
+              <div class="card-thumb-banner">
+                <div class="thumb-tennis-court" style="background: #283a4c">
+                  <div class="court-net-line"></div>
+                </div>
+              </div>
+              <div class="card-details">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: start;
+                  "
+                >
+                  <h3 style="font-size: 15px; font-weight: 600">
+                    Sarah T. vs Elena R.
+                  </h3>
+                  <span class="badge-unknown">Processing (74%)</span>
+                </div>
+                <p style="font-size: 12px; color: var(--text-secondary)">
+                  Today · 3 GoPro Files Stitching
+                </p>
+                <div class="segmented-bar">
+                  <div class="seg-unknown" style="width: 74%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 3: UPLOAD MATCH (3-STEP) -->
+      <div id="screen-upload" class="screen-view">
+        <div
+          style="
+            max-width: 800px;
+            margin: 32px auto;
+            width: 100%;
+            padding: 0 20px;
+          "
+        >
+          <h2 style="font-size: 22px; margin-bottom: 8px">
+            Upload Match Video
+          </h2>
+          <p
+            style="
+              font-size: 13px;
+              color: var(--text-secondary);
+              margin-bottom: 24px;
+            "
+          >
+            Drop your GoPro or camera files. Consecutive clips are joined
+            seamlessly.
+          </p>
+
+          <div class="dropzone-box" onclick="simulateUploadStart()">
+            <svg
+              width="44"
+              height="44"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--accent-primary)"
+              stroke-width="2"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <div>
+              <div style="font-weight: 600; font-size: 15px">
+                Click to select GoPro files (GX010124.MP4, GX020124.MP4)
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--text-secondary);
+                  margin-top: 4px;
+                "
+              >
+                Drag & drop supported · Automatic file sequence detection
+              </div>
+            </div>
+            <button class="btn btn-primary" style="margin-top: 8px">
+              Select Files
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 4: PROCESSING -->
+      <div id="screen-processing" class="screen-view">
+        <div class="processing-stepper">
+          <h2 style="font-size: 20px">Analyzing Match Video</h2>
+          <p style="font-size: 13px; color: var(--text-secondary)">
+            You can close this tab anytime. We will notify you once detection is
+            done.
+          </p>
+
+          <div class="step-item done">
+            <div class="step-dot">✓</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600">
+                Uploaded 3 GoPro Video Files
+              </div>
+              <div style="font-size: 12px; color: var(--text-secondary)">
+                12.4 GB stitched without loss
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item done">
+            <div class="step-dot">✓</div>
+            <div>
+              <div style="font-size: 14px; font-weight: 600">
+                Preparing Multi-Resolution Proxy
+              </div>
+              <div style="font-size: 12px; color: var(--text-secondary)">
+                Optimized for courtside tablet scrubbing
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item active">
+            <div class="step-dot">3</div>
+            <div style="flex: 1">
+              <div style="display: flex; justify-content: space-between">
+                <span style="font-size: 14px; font-weight: 600"
+                  >Detecting Rallies & Points</span
+                >
+                <span
+                  style="
+                    font-size: 13px;
+                    color: var(--accent-primary);
+                    font-weight: 700;
+                  "
+                  >74%</span
+                >
+              </div>
+              <div class="segmented-bar" style="margin-top: 6px">
+                <div
+                  class="seg-won"
+                  style="width: 74%; background: var(--accent-primary)"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-dot">4</div>
+            <div style="font-size: 14px; color: var(--text-secondary)">
+              Serve & Score Attribution
+            </div>
+          </div>
+
+          <button
+            class="btn btn-primary"
+            style="margin-top: 12px"
+            onclick="switchView('screen-overview')"
+          >
+            Simulate Analysis Complete ➔
+          </button>
+        </div>
+      </div>
+
+      <!-- SCREEN 5: MATCH OVERVIEW (HERO) -->
+      <div id="screen-overview" class="screen-view">
+        <div class="overview-container">
+          <div class="match-header-strip">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px">
+                <h1 style="font-size: 20px; font-weight: 700">
+                  Alex M. vs David K.
+                </h1>
+                <span
+                  style="
+                    background: var(--surface-2);
+                    font-size: 11px;
+                    padding: 3px 8px;
+                    border-radius: 4px;
+                    font-weight: 600;
+                  "
+                  >Singles</span
+                >
+                <span
+                  style="
+                    background: var(--surface-2);
+                    font-size: 11px;
+                    padding: 3px 8px;
+                    border-radius: 4px;
+                    font-weight: 600;
+                  "
+                  >Near POV</span
+                >
+              </div>
+              <p
+                style="
+                  font-size: 13px;
+                  color: var(--text-secondary);
+                  margin-top: 4px;
+                "
+              >
+                60 Total Points Detected · Oct 28
+              </p>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center">
+              <div
+                style="
+                  background: rgba(224, 169, 59, 0.15);
+                  border: 1px solid var(--status-unknown);
+                  color: var(--status-unknown);
+                  padding: 6px 14px;
+                  border-radius: var(--radius-pill);
+                  font-size: 12px;
+                  font-weight: 600;
+                "
+              >
+                ⚠️ 6 points need review
+              </div>
+              <button
+                class="btn btn-secondary"
+                onclick="switchView('screen-group')"
+              >
+                Review All
+              </button>
+            </div>
+          </div>
+
+          <!-- 2x2 TACTICAL QUADRANT GRID -->
+          <div class="quadrant-grid">
+            <!-- QUAD 1 -->
+            <div class="quad-card" onclick="switchView('screen-group')">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <h3 style="font-size: 16px; font-weight: 700">
+                  Serving — Deuce Court
+                </h3>
+                <span
+                  style="
+                    font-size: 13px;
+                    color: var(--accent-primary);
+                    font-weight: 700;
+                  "
+                  >18 Points ➔</span
+                >
+              </div>
+              <div class="segmented-bar">
+                <div class="seg-won" style="width: 61%"></div>
+                <div class="seg-lost" style="width: 28%"></div>
+                <div class="seg-unknown" style="width: 11%"></div>
+              </div>
+              <div class="stat-badge-row">
+                <span class="badge-won">✓ 11 Won</span>
+                <span class="badge-lost">✕ 5 Lost</span>
+                <span class="badge-unknown">? 2 Unknown</span>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(4, 1fr);
+                  gap: 6px;
+                  margin-top: 4px;
+                "
+              >
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+              </div>
+            </div>
+
+            <!-- QUAD 2 -->
+            <div class="quad-card" onclick="switchView('screen-group')">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <h3 style="font-size: 16px; font-weight: 700">
+                  Serving — Ad Court
+                </h3>
+                <span
+                  style="
+                    font-size: 13px;
+                    color: var(--accent-primary);
+                    font-weight: 700;
+                  "
+                  >14 Points ➔</span
+                >
+              </div>
+              <div class="segmented-bar">
+                <div class="seg-won" style="width: 57%"></div>
+                <div class="seg-lost" style="width: 43%"></div>
+              </div>
+              <div class="stat-badge-row">
+                <span class="badge-won">✓ 8 Won</span>
+                <span class="badge-lost">✕ 6 Lost</span>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(4, 1fr);
+                  gap: 6px;
+                  margin-top: 4px;
+                "
+              >
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+              </div>
+            </div>
+
+            <!-- QUAD 3 -->
+            <div class="quad-card" onclick="switchView('screen-group')">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <h3 style="font-size: 16px; font-weight: 700">
+                  Receiving — Deuce Court
+                </h3>
+                <span
+                  style="
+                    font-size: 13px;
+                    color: var(--accent-primary);
+                    font-weight: 700;
+                  "
+                  >16 Points ➔</span
+                >
+              </div>
+              <div class="segmented-bar">
+                <div class="seg-won" style="width: 37%"></div>
+                <div class="seg-lost" style="width: 56%"></div>
+                <div class="seg-unknown" style="width: 7%"></div>
+              </div>
+              <div class="stat-badge-row">
+                <span class="badge-won">✓ 6 Won</span>
+                <span class="badge-lost">✕ 9 Lost</span>
+                <span class="badge-unknown">? 1 Unknown</span>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(4, 1fr);
+                  gap: 6px;
+                  margin-top: 4px;
+                "
+              >
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+              </div>
+            </div>
+
+            <!-- QUAD 4 -->
+            <div class="quad-card" onclick="switchView('screen-group')">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <h3 style="font-size: 16px; font-weight: 700">
+                  Receiving — Ad Court
+                </h3>
+                <span
+                  style="
+                    font-size: 13px;
+                    color: var(--accent-primary);
+                    font-weight: 700;
+                  "
+                  >12 Points ➔</span
+                >
+              </div>
+              <div class="segmented-bar">
+                <div class="seg-won" style="width: 58%"></div>
+                <div class="seg-lost" style="width: 42%"></div>
+              </div>
+              <div class="stat-badge-row">
+                <span class="badge-won">✓ 7 Won</span>
+                <span class="badge-lost">✕ 5 Lost</span>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(4, 1fr);
+                  gap: 6px;
+                  margin-top: 4px;
+                "
+              >
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+                <div
+                  style="height: 44px; background: #111a24; border-radius: 4px"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 6: GROUP VIEW -->
+      <div id="screen-group" class="screen-view">
+        <div class="group-view-container">
+          <!-- PLAYER DOCK -->
+          <div class="player-dock-top">
+            <div
+              class="thumb-tennis-court"
+              style="width: 70%; height: 80%; opacity: 0.6"
+            >
+              <div class="court-net-line"></div>
+            </div>
+            <div
+              style="
+                position: absolute;
+                bottom: 14px;
+                left: 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+              "
+            >
+              <button
+                class="btn btn-primary"
+                style="padding: 4px 12px; height: 32px; font-size: 12px"
+              >
+                ▶ Play All (18)
+              </button>
+              <span style="font-size: 13px; font-weight: 600"
+                >Playing 3 of 18 · Serving Deuce</span
+              >
+            </div>
+            <div
+              style="
+                position: absolute;
+                bottom: 14px;
+                right: 20px;
+                display: flex;
+                gap: 8px;
+              "
+            >
+              <button
+                class="btn btn-secondary"
+                style="height: 32px; font-size: 12px"
+              >
+                ⏮ Prev
+              </button>
+              <button
+                class="btn btn-secondary"
+                style="height: 32px; font-size: 12px"
+              >
+                Next ⏭
+              </button>
+            </div>
+          </div>
+
+          <!-- FILTER TABS -->
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 24px;
+              background: var(--surface-1);
+              border-bottom: 1px solid var(--border-subtle);
+            "
+          >
+            <div style="display: flex; gap: 8px">
+              <button class="flow-btn active">All (18)</button>
+              <button class="flow-btn">Won (11)</button>
+              <button class="flow-btn">Lost (5)</button>
+              <button class="flow-btn">Unknown (2)</button>
+            </div>
+            <span style="font-size: 12px; color: var(--text-secondary)"
+              >Select multiple points to build a lesson</span
+            >
+          </div>
+
+          <!-- POINT GRID -->
+          <div class="point-grid-scroll">
+            <!-- Point Card 1 -->
+            <div class="point-card" onclick="togglePointSelect(this, 1)">
+              <div class="point-card-thumb">
+                <span
+                  style="
+                    position: absolute;
+                    top: 8px;
+                    left: 8px;
+                    background: rgba(0, 0, 0, 0.8);
+                    font-size: 11px;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-weight: 700;
+                  "
+                  >#01 · 0:14</span
+                >
+                <span
+                  class="badge-won"
+                  style="position: absolute; top: 8px; right: 8px"
+                  >✓ Won</span
+                >
+              </div>
+              <div class="point-card-body">
+                <div>
+                  <div style="font-size: 13px; font-weight: 600">
+                    Wide Ace (114 mph)
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-secondary)">
+                    Deuce Court · 1st Serve
+                  </div>
+                </div>
+                <input type="checkbox" class="point-check" />
+              </div>
+            </div>
+
+            <!-- Point Card 2 -->
+            <div class="point-card" onclick="togglePointSelect(this, 2)">
+              <div class="point-card-thumb">
+                <span
+                  style="
+                    position: absolute;
+                    top: 8px;
+                    left: 8px;
+                    background: rgba(0, 0, 0, 0.8);
+                    font-size: 11px;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-weight: 700;
+                  "
+                  >#02 · 0:21</span
+                >
+                <span
+                  class="badge-lost"
+                  style="position: absolute; top: 8px; right: 8px"
+                  >✕ Lost</span
+                >
+              </div>
+              <div class="point-card-body">
+                <div>
+                  <div style="font-size: 13px; font-weight: 600">
+                    Forehand Unforced Error
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-secondary)">
+                    Rally 5 shots · Ball long
+                  </div>
+                </div>
+                <input type="checkbox" class="point-check" />
+              </div>
+            </div>
+
+            <!-- Point Card 3 -->
+            <div class="point-card" onclick="togglePointSelect(this, 3)">
+              <div class="point-card-thumb">
+                <span
+                  style="
+                    position: absolute;
+                    top: 8px;
+                    left: 8px;
+                    background: rgba(0, 0, 0, 0.8);
+                    font-size: 11px;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-weight: 700;
+                  "
+                  >#03 · 0:08</span
+                >
+                <span
+                  class="badge-won"
+                  style="position: absolute; top: 8px; right: 8px"
+                  >✓ Won</span
+                >
+              </div>
+              <div class="point-card-body">
+                <div>
+                  <div style="font-size: 13px; font-weight: 600">
+                    Body Serve Winner
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-secondary)">
+                    Deuce Court · Jammed return
+                  </div>
+                </div>
+                <input type="checkbox" class="point-check" />
+              </div>
+            </div>
+          </div>
+
+          <!-- STICKY ACTION BAR -->
+          <div class="sticky-action-dock" id="stickyDock">
+            <span
+              style="font-weight: 700; font-size: 13px"
+              id="selectedCountText"
+              >0 Points Selected</span
+            >
+            <div style="display: flex; gap: 10px">
+              <button
+                class="btn btn-secondary"
+                style="height: 34px; font-size: 12px"
+                onclick="openShareModal()"
+              >
+                Share Selection
+              </button>
+              <button
+                class="btn btn-primary"
+                style="height: 34px; font-size: 12px"
+                onclick="switchView('screen-studio')"
+              >
+                ★ Create Lesson in Studio
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 8: COACHING STUDIO (HERO WORKSPACE) -->
+      <div id="screen-studio" class="screen-view">
+        <div class="studio-layout">
+          <!-- CANVAS WORKSPACE -->
+          <div class="studio-main">
+            <!-- ZOOM & MINIMAP NOTIFICATION BAR -->
+            <div
+              style="
+                position: absolute;
+                top: 12px;
+                left: 16px;
+                z-index: 35;
+                display: flex;
+                gap: 8px;
+              "
+            >
+              <button
+                class="btn btn-secondary"
+                style="height: 32px; font-size: 12px"
+                onclick="adjustZoom(1.2)"
+              >
+                🔍 Zoom Far Court
+              </button>
+              <button
+                class="btn btn-secondary"
+                style="height: 32px; font-size: 12px"
+                onclick="adjustZoom(1.0)"
+              >
+                Reset Zoom
+              </button>
+            </div>
+
+            <div class="minimap-overlay" id="studioMinimap">
+              <div
+                style="
+                  width: 100%;
+                  height: 100%;
+                  background: #1b4931;
+                  position: relative;
+                "
+              >
+                <div class="minimap-frustum" id="frustumBox"></div>
+              </div>
+            </div>
+
+            <!-- DRAWING & VIDEO CANVAS -->
+            <div class="canvas-viewport" id="canvasViewport">
+              <div class="court-render-bg" id="courtCanvasBg">
+                <div class="service-box-left"></div>
+                <div class="service-box-right"></div>
+                <div class="net-line-studio"></div>
+                <!-- Player marker (far side) -->
+                <div
+                  style="
+                    position: absolute;
+                    top: 20%;
+                    right: 30%;
+                    width: 18px;
+                    height: 18px;
+                    background: #d4f23c;
+                    border-radius: 50%;
+                    border: 2px solid #000;
+                    box-shadow: 0 0 10px #d4f23c;
+                  "
+                  title="Opponent Far Court"
+                ></div>
+                <!-- Player marker (near side) -->
+                <div
+                  style="
+                    position: absolute;
+                    bottom: 15%;
+                    left: 35%;
+                    width: 20px;
+                    height: 20px;
+                    background: #e4713a;
+                    border-radius: 50%;
+                    border: 2px solid #fff;
+                  "
+                  title="Alex (Near Court)"
+                ></div>
+              </div>
+              <canvas id="annotationCanvas"></canvas>
+            </div>
+
+            <!-- STUDIO TOOLBAR -->
+            <div class="studio-toolbar">
+              <div class="tool-group">
+                <button
+                  class="tool-btn active"
+                  title="Pointer (V)"
+                  onclick="selectTool('pointer', this)"
+                >
+                  👆
+                </button>
+                <button
+                  class="tool-btn"
+                  title="Line (L)"
+                  onclick="selectTool('line', this)"
+                >
+                  ╱
+                </button>
+                <button
+                  class="tool-btn"
+                  title="Arrow (A)"
+                  onclick="selectTool('arrow', this)"
+                >
+                  ➔
+                </button>
+                <button
+                  class="tool-btn"
+                  title="Freehand Pen (P)"
+                  onclick="selectTool('pen', this)"
+                >
+                  ✎
+                </button>
+                <button
+                  class="tool-btn"
+                  title="Circle (C)"
+                  onclick="selectTool('circle', this)"
+                >
+                  ◯
+                </button>
+                <button
+                  class="tool-btn"
+                  title="Rectangle (R)"
+                  onclick="selectTool('rect', this)"
+                >
+                  ▭
+                </button>
+              </div>
+
+              <!-- PALETTE -->
+              <div class="swatch-group">
+                <div
+                  class="swatch selected"
+                  style="background: #d4f23c"
+                  onclick="selectColor('#D4F23C', this)"
+                ></div>
+                <div
+                  class="swatch"
+                  style="background: #e4713a"
+                  onclick="selectColor('#E4713A', this)"
+                ></div>
+                <div
+                  class="swatch"
+                  style="background: #ffffff"
+                  onclick="selectColor('#FFFFFF', this)"
+                ></div>
+                <div
+                  class="swatch"
+                  style="background: #ff5a5f"
+                  onclick="selectColor('#FF5A5F', this)"
+                ></div>
+                <div
+                  class="swatch"
+                  style="background: #3898ec"
+                  onclick="selectColor('#3898EC', this)"
+                ></div>
+              </div>
+
+              <div class="tool-group">
+                <button
+                  class="tool-btn"
+                  title="Undo (⌘Z)"
+                  onclick="clearCanvas()"
+                >
+                  ↺
+                </button>
+                <button
+                  class="tool-btn"
+                  title="Clear all drawings"
+                  onclick="clearCanvas()"
+                >
+                  🗑
+                </button>
+              </div>
+
+              <!-- PLAYBACK BAR SCRUBBER -->
+              <div style="display: flex; align-items: center; gap: 8px">
+                <button
+                  class="tool-btn"
+                  style="height: 32px; width: 32px"
+                  title="Frame Back"
+                >
+                  ❮
+                </button>
+                <button
+                  class="tool-btn"
+                  style="height: 32px; width: 32px"
+                  id="studioPlayBtn"
+                  onclick="toggleStudioPlay()"
+                >
+                  ▶
+                </button>
+                <button
+                  class="tool-btn"
+                  style="height: 32px; width: 32px"
+                  title="Frame Forward"
+                >
+                  ❯
+                </button>
+                <span
+                  style="
+                    font-size: 12px;
+                    font-weight: 700;
+                    font-variant-numeric: tabular-nums;
+                    margin-left: 6px;
+                  "
+                  >00:04.12</span
+                >
+              </div>
+
+              <!-- RECORD VOICEOVER CTA -->
+              <div>
+                <button
+                  class="record-pill-btn"
+                  id="recordBtn"
+                  onclick="toggleVoiceRecording()"
+                >
+                  <span
+                    style="
+                      width: 8px;
+                      height: 8px;
+                      background: #fff;
+                      border-radius: 50%;
+                    "
+                  ></span>
+                  <span id="recordLabel">Record Voiceover</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT SIDE PANEL: LESSON CLIPS -->
+          <div class="studio-sidebar">
+            <div
+              style="
+                padding: 16px;
+                border-bottom: 1px solid var(--border-subtle);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              <div>
+                <h3 style="font-size: 14px; font-weight: 700">
+                  Lesson Clips (3)
+                </h3>
+                <p style="font-size: 11px; color: var(--text-secondary)">
+                  Serving Deuce Out-Wide Pattern
+                </p>
+              </div>
+              <button
+                class="btn btn-primary"
+                style="height: 30px; font-size: 11px; padding: 0 10px"
+                onclick="openShareModal()"
+              >
+                Share
+              </button>
+            </div>
+
+            <div class="sidebar-clip-list">
+              <div class="clip-row-item">
+                <div
+                  style="
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: var(--accent-primary);
+                  "
+                >
+                  #1
+                </div>
+                <div
+                  style="
+                    width: 50px;
+                    height: 34px;
+                    background: #000;
+                    border-radius: 4px;
+                  "
+                ></div>
+                <div style="flex: 1">
+                  <div style="font-size: 12px; font-weight: 600">
+                    Serve Toss Alignment
+                  </div>
+                  <div style="font-size: 10px; color: var(--text-secondary)">
+                    0:14 · 2 telestrations
+                  </div>
+                </div>
+              </div>
+
+              <div class="clip-row-item">
+                <div
+                  style="
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: var(--accent-primary);
+                  "
+                >
+                  #2
+                </div>
+                <div
+                  style="
+                    width: 50px;
+                    height: 34px;
+                    background: #000;
+                    border-radius: 4px;
+                  "
+                ></div>
+                <div style="flex: 1">
+                  <div style="font-size: 12px; font-weight: 600">
+                    Opponent Recovery Split
+                  </div>
+                  <div style="font-size: 10px; color: var(--text-secondary)">
+                    0:21 · 1 note
+                  </div>
+                </div>
+              </div>
+
+              <div class="clip-row-item">
+                <div
+                  style="
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: var(--accent-primary);
+                  "
+                >
+                  #3
+                </div>
+                <div
+                  style="
+                    width: 50px;
+                    height: 34px;
+                    background: #000;
+                    border-radius: 4px;
+                  "
+                ></div>
+                <div style="flex: 1">
+                  <div style="font-size: 12px; font-weight: 600">
+                    Plus-One Forehand Placement
+                  </div>
+                  <div style="font-size: 10px; color: var(--text-secondary)">
+                    0:08
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style="
+                padding: 16px;
+                border-top: 1px solid var(--border-subtle);
+                background: var(--surface-1);
+              "
+            >
+              <label
+                style="
+                  font-size: 11px;
+                  font-weight: 600;
+                  color: var(--text-secondary);
+                  margin-bottom: 6px;
+                  display: block;
+                "
+                >Coach Notes for Alex</label
+              >
+              <textarea
+                style="
+                  width: 100%;
+                  height: 70px;
+                  background: var(--surface-2);
+                  border: 1px solid var(--border-subtle);
+                  border-radius: 8px;
+                  padding: 8px;
+                  font-size: 12px;
+                  color: #fff;
+                  resize: none;
+                  font-family: inherit;
+                "
+                placeholder="Add specific technical cues..."
+              >
+Make sure to keep your toss 6 inches further into the court to drive David out of position.</textarea
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 10: SHARE MODAL -->
+      <div class="modal-backdrop" id="shareModal">
+        <div class="share-modal-card">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <h3 style="font-size: 18px; font-weight: 700">
+              Share Private Lesson
+            </h3>
+            <span
+              style="cursor: pointer; font-size: 18px"
+              onclick="closeShareModal()"
+              >✕</span
+            >
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary)">
+            Students open this link directly on their mobile device or browser.
+            No login or app install needed.
+          </p>
+
+          <div class="share-url-box">
+            <input
+              type="text"
+              id="shareUrlInput"
+              value="https://courtside.app/l/alex-serve-pattern-x7k9"
+              readonly
+            />
+            <button
+              class="btn btn-primary"
+              style="border-radius: 0; height: 100%"
+              onclick="copyShareLink()"
+            >
+              Copy Link
+            </button>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              font-size: 13px;
+              padding-top: 4px;
+            "
+          >
+            <label
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+              "
+            >
+              <input type="checkbox" checked /> Link expires in 14 days
+            </label>
+            <label
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+              "
+            >
+              <input type="checkbox" /> Require 4-digit passcode for student
+            </label>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding-top: 8px;
+              border-top: 1px solid var(--border-subtle);
+            "
+          >
+            <span
+              style="
+                font-size: 12px;
+                color: var(--status-lost);
+                cursor: pointer;
+              "
+              >Revoke Link Access</span
+            >
+            <button
+              class="btn btn-secondary"
+              onclick="
+                closeShareModal();
+                switchView('screen-student');
+                setDeviceMode('mobile');
+              "
+            >
+              Preview Student View ➔
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 11: STUDENT VIEW (MOBILE FIRST) -->
+      <div id="screen-student" class="screen-view">
+        <div class="student-view-wrap">
+          <div class="student-player">
+            <div
+              class="thumb-tennis-court"
+              style="width: 85%; height: 80%; opacity: 0.8"
+            >
+              <div class="court-net-line"></div>
+            </div>
+            <!-- Synchronized drawings simulation overlay -->
+            <svg
+              style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+              "
+            >
+              <line
+                x1="120"
+                y1="180"
+                x2="260"
+                y2="80"
+                stroke="#D4F23C"
+                stroke-width="4"
+                stroke-dasharray="6"
+              />
+              <polygon points="265,75 250,80 258,95" fill="#D4F23C" />
+              <circle
+                cx="270"
+                cy="70"
+                r="16"
+                stroke="#E4713A"
+                stroke-width="3"
+                fill="none"
+              />
+            </svg>
+            <div
+              style="
+                position: absolute;
+                bottom: 10px;
+                left: 12px;
+                background: rgba(0, 0, 0, 0.8);
+                font-size: 11px;
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-weight: 700;
+              "
+            >
+              🎙 Coach David Speaking (0:14)
+            </div>
+          </div>
+
+          <div class="student-body">
+            <div class="coach-avatar-row">
+              <div class="coach-avatar">DK</div>
+              <div>
+                <h3 style="font-size: 15px; font-weight: 700">
+                  Coach David K.
+                </h3>
+                <p style="font-size: 12px; color: var(--text-secondary)">
+                  Lesson: 2nd Serve Placement
+                </p>
+              </div>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                overflow-x: auto;
+                padding-bottom: 6px;
+              "
+            >
+              <div
+                style="
+                  background: var(--surface-2);
+                  border: 1px solid var(--accent-primary);
+                  border-radius: var(--radius-sm);
+                  padding: 8px 12px;
+                  min-width: 130px;
+                "
+              >
+                <span
+                  style="
+                    font-size: 10px;
+                    color: var(--accent-primary);
+                    font-weight: 700;
+                  "
+                  >CLIP 1 ACTIVE</span
+                >
+                <div style="font-size: 12px; font-weight: 600; margin-top: 2px">
+                  Toss Alignment
+                </div>
+              </div>
+              <div
+                style="
+                  background: var(--surface-1);
+                  border: 1px solid var(--border-subtle);
+                  border-radius: var(--radius-sm);
+                  padding: 8px 12px;
+                  min-width: 130px;
+                  opacity: 0.6;
+                "
+              >
+                <span
+                  style="
+                    font-size: 10px;
+                    color: var(--text-secondary);
+                    font-weight: 700;
+                  "
+                  >CLIP 2</span
+                >
+                <div style="font-size: 12px; font-weight: 600; margin-top: 2px">
+                  Split-Step Timing
+                </div>
+              </div>
+            </div>
+
+            <div
+              style="
+                background: var(--surface-1);
+                border: 1px solid var(--border-subtle);
+                border-radius: var(--radius-md);
+                padding: 16px;
+              "
+            >
+              <h4
+                style="
+                  font-size: 13px;
+                  font-weight: 700;
+                  color: var(--accent-primary);
+                  margin-bottom: 6px;
+                "
+              >
+                Coach Note
+              </h4>
+              <p
+                style="
+                  font-size: 13px;
+                  line-height: 1.5;
+                  color: var(--text-primary);
+                "
+              >
+                "Notice where your toss lands relative to the baseline. We want
+                it consistently 6 inches in front so you can attack the net
+                behind it."
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE SYSTEM JAVASCRIPT -->
+    <script>
+      // VIEW CONTROLLER
+      function switchView(viewId, triggerBtn) {
+        document
+          .querySelectorAll(".screen-view")
+          .forEach((el) => el.classList.remove("active"));
+        const target = document.getElementById(viewId);
+        if (target) target.classList.add("active");
+
+        if (triggerBtn) {
+          document
+            .querySelectorAll(".flow-btn")
+            .forEach((b) => b.classList.remove("active"));
+          triggerBtn.classList.add("active");
+        }
+
+        // Hide app header on student view
+        const appHeader = document.getElementById("appHeader");
+        if (viewId === "screen-student") {
+          appHeader.style.display = "none";
+        } else {
+          appHeader.style.display = "flex";
+        }
+
+        // Initialize canvas when entering coaching studio
+        if (viewId === "screen-studio") {
+          setTimeout(initCanvasEngine, 50);
+        }
+      }
+
+      // DEVICE SIMULATOR MODE
+      function setDeviceMode(mode) {
+        const container = document.getElementById("viewport-container");
+        if (mode === "mobile") {
+          container.classList.add("mobile-mode");
+        } else {
+          container.classList.remove("mobile-mode");
+        }
+      }
+
+      // MULTI-SELECTION LOGIC FOR POINTS
+      let selectedPointCount = 0;
+      function togglePointSelect(cardEl, pointId) {
+        cardEl.classList.toggle("selected");
+        const checkbox = cardEl.querySelector(".point-check");
+        checkbox.checked = !checkbox.checked;
+
+        selectedPointCount = document.querySelectorAll(
+          ".point-card.selected",
+        ).length;
+        const dock = document.getElementById("stickyDock");
+        const countLabel = document.getElementById("selectedCountText");
+
+        if (selectedPointCount > 0) {
+          dock.classList.add("visible");
+          countLabel.textContent = `${selectedPointCount} Point${selectedPointCount > 1 ? "s" : ""} Selected`;
+        } else {
+          dock.classList.remove("visible");
+        }
+      }
+
+      // CANVAS DRAWING & ZOOM ENGINE
+      let canvas, ctx;
+      let currentTool = "pointer";
+      let currentColor = "#D4F23C";
+      let isDrawing = false;
+      let startX = 0,
+        startY = 0;
+      let currentZoom = 1.0;
+
+      function initCanvasEngine() {
+        canvas = document.getElementById("annotationCanvas");
+        if (!canvas) return;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        ctx = canvas.getContext("2d");
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        // Mouse Drawing Listeners
+        canvas.onmousedown = (e) => {
+          if (currentTool === "pointer") return;
+          isDrawing = true;
+          const box = canvas.getBoundingClientRect();
+          startX = e.clientX - box.left;
+          startY = e.clientY - box.top;
+          if (currentTool === "pen") {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+          }
+        };
+
+        canvas.onmousemove = (e) => {
+          if (!isDrawing) return;
+          const box = canvas.getBoundingClientRect();
+          const curX = e.clientX - box.left;
+          const curY = e.clientY - box.top;
+
+          if (currentTool === "pen") {
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = 3;
+            ctx.lineTo(curX, curY);
+            ctx.stroke();
+          }
+        };
+
+        canvas.onmouseup = (e) => {
+          if (!isDrawing) return;
+          isDrawing = false;
+          const box = canvas.getBoundingClientRect();
+          const endX = e.clientX - box.left;
+          const endY = e.clientY - box.top;
+
+          ctx.strokeStyle = currentColor;
+          ctx.fillStyle = currentColor;
+          ctx.lineWidth = 3;
+
+          if (currentTool === "line") {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+          } else if (currentTool === "arrow") {
+            drawArrow(ctx, startX, startY, endX, endY);
+          } else if (currentTool === "circle") {
+            const radius = Math.sqrt(
+              Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2),
+            );
+            ctx.beginPath();
+            ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+          } else if (currentTool === "rect") {
+            ctx.strokeRect(startX, startY, endX - startX, endY - startY);
+          }
+        };
+      }
+
+      function drawArrow(context, fromx, fromy, tox, toy) {
+        const headlen = 14;
+        const dx = tox - fromx;
+        const dy = toy - fromy;
+        const angle = Math.atan2(dy, dx);
+        context.beginPath();
+        context.moveTo(fromx, fromy);
+        context.lineTo(tox, toy);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(tox, toy);
+        context.lineTo(
+          tox - headlen * Math.cos(angle - Math.PI / 6),
+          toy - headlen * Math.sin(angle - Math.PI / 6),
+        );
+        context.lineTo(
+          tox - headlen * Math.cos(angle + Math.PI / 6),
+          toy - headlen * Math.sin(angle + Math.PI / 6),
+        );
+        context.closePath();
+        context.fill();
+      }
+
+      function selectTool(toolName, el) {
+        currentTool = toolName;
+        document
+          .querySelectorAll(".tool-btn")
+          .forEach((b) => b.classList.remove("active"));
+        el.classList.add("active");
+      }
+
+      function selectColor(colorHex, el) {
+        currentColor = colorHex;
+        document
+          .querySelectorAll(".swatch")
+          .forEach((s) => s.classList.remove("selected"));
+        el.classList.add("selected");
+      }
+
+      function clearCanvas() {
+        if (ctx && canvas) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      // ZOOM & MINIMAP LOGIC
+      function adjustZoom(level) {
+        currentZoom = level;
+        const courtBg = document.getElementById("courtCanvasBg");
+        const minimap = document.getElementById("studioMinimap");
+        const frustum = document.getElementById("frustumBox");
+
+        courtBg.style.transform = `scale(${currentZoom})`;
+
+        if (currentZoom > 1.0) {
+          minimap.style.display = "block";
+          frustum.style.width = `${100 / currentZoom}%`;
+          frustum.style.height = `${100 / currentZoom}%`;
+          frustum.style.top = "10%";
+          frustum.style.left = "25%";
+        } else {
+          minimap.style.display = "none";
+        }
+      }
+
+      // VOICEOVER SIMULATION ENGINE
+      let isRecordingVoice = false;
+      let recordTimerInterval;
+      let recordSeconds = 0;
+
+      function toggleVoiceRecording() {
+        const btn = document.getElementById("recordBtn");
+        const label = document.getElementById("recordLabel");
+
+        if (!isRecordingVoice) {
+          isRecordingVoice = true;
+          btn.classList.add("recording");
+          recordSeconds = 0;
+          recordTimerInterval = setInterval(() => {
+            recordSeconds++;
+            const mins = String(Math.floor(recordSeconds / 60)).padStart(
+              2,
+              "0",
+            );
+            const secs = String(recordSeconds % 60).padStart(2, "0");
+            label.textContent = `Recording (${mins}:${secs})`;
+          }, 1000);
+        } else {
+          isRecordingVoice = false;
+          clearInterval(recordTimerInterval);
+          btn.classList.remove("recording");
+          label.textContent = "Re-record Voiceover";
+        }
+      }
+
+      function toggleStudioPlay() {
+        const btn = document.getElementById("studioPlayBtn");
+        btn.textContent = btn.textContent === "▶" ? "⏸" : "▶";
+      }
+
+      // SHARE MODAL ACTIONS
+      function openShareModal() {
+        document.getElementById("shareModal").classList.add("open");
+      }
+      function closeShareModal() {
+        document.getElementById("shareModal").classList.remove("open");
+      }
+      function copyShareLink() {
+        const input = document.getElementById("shareUrlInput");
+        input.select();
+        navigator.clipboard.writeText(input.value);
+        alert("Link copied to clipboard: " + input.value);
+      }
+
+      function simulateUploadStart() {
+        switchView("screen-processing");
+      }
+    </script>
+  </body>
+</html>

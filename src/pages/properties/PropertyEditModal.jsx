@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Input, Label, Select, Textarea } from '../../components/ui/Field.jsx';

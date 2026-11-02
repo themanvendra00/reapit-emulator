@@ -29,16 +29,16 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-accent px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-8 shadow-flat">
+    <div className="flex min-h-screen items-center justify-center bg-muted px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-xs">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-lg font-bold text-white">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
             R
           </div>
-          <h1 className="text-lg font-semibold text-ink">
+          <h1 className="text-lg font-semibold text-foreground">
             Reapit Emulator Console
           </h1>
-          <p className="mt-1 text-sm text-inkmuted">Sign in to continue</p>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -76,7 +76,7 @@ export default function Login() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-inkmuted">
+        <p className="mt-6 text-center text-xs text-muted-foreground">
           Demo credentials — admin@soleshire.com / Emulator@123
         </p>
       </div>

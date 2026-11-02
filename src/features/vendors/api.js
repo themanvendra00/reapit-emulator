@@ -19,6 +19,16 @@ export function useVendorsList({ page, pageSize, email, name }) {
   });
 }
 
+// All vendors, unpaginated-ish — used to populate filter/dropdown options.
+export function useVendorOptions() {
+  const api = useApiClient();
+  return useQuery({
+    queryKey: ['vendor-options', api.baseUrl],
+    queryFn: () => api.getPaged('/vendors/?pageSize=100&pageNumber=1'),
+    staleTime: 60_000,
+  });
+}
+
 export function useVendor(id) {
   const api = useApiClient();
   return useQuery({

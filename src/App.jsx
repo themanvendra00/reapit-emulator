@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Login from './pages/Login.jsx';
 import Layout from './components/Layout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
 import VendorsListPage from './pages/vendors/VendorsListPage.jsx';
 import PropertiesListPage from './pages/properties/PropertiesListPage.jsx';
 import PropertyDetailPage from './pages/properties/PropertyDetailPage.jsx';
@@ -19,7 +20,8 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/vendors" replace />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/vendors" element={<VendorsListPage />} />
         <Route path="/properties" element={<PropertiesListPage />} />
         <Route path="/properties/:id" element={<PropertyDetailPage />} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import {
   useCreateOffer,
   usePropertyOffers,
@@ -10,13 +10,17 @@ import Badge from '../../../components/ui/Badge.jsx';
 import Modal from '../../../components/ui/Modal.jsx';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog.jsx';
 import { Input, Label, Select, Textarea } from '../../../components/ui/Field.jsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table.jsx';
+import Pagination from '../../../components/ui/Pagination.jsx';
 import { FullPageSpinner, ErrorBanner, EmptyState } from '../../../components/ui/Feedback.jsx';
 import { formatCurrency, formatDate, offerApplicantName, titleCase } from '../../../lib/format.js';
 
 const STATUSES = ['pending', 'noteOfInterest', 'accepted', 'rejected', 'withdrawn'];
+const PAGE_SIZE = 20;
 
 export default function OffersTab({ propertyId }) {
-  const { data, isLoading, isError, error, refetch } = usePropertyOffers(propertyId);
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, error, refetch } = usePropertyOffers(propertyId, { page, pageSize: PAGE_SIZE });
   const [createOpen, setCreateOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
   const [withdrawTarget, setWithdrawTarget] = useState(null);
@@ -50,29 +54,29 @@ export default function OffersTab({ propertyId }) {
       ) : data.items.length === 0 ? (
         <EmptyState title="No offers yet" message="Record an offer from an applicant." />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-flat">
-          <table className="w-full text-sm">
-            <thead className="h-10 border-b border-line bg-mist text-left text-xs font-medium text-inkmuted">
-              <tr>
-                <th className="px-4 font-medium">Applicant</th>
-                <th className="px-4 font-medium">Amount</th>
-                <th className="px-4 font-medium">Status</th>
-                <th className="px-4 font-medium">Date</th>
-                <th className="px-4 font-medium" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-rowline">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+          <Table>
+            <TableHeader className="bg-muted">
+              <TableRow>
+                <TableHead className="h-10 px-4">Applicant</TableHead>
+                <TableHead className="px-4">Amount</TableHead>
+                <TableHead className="px-4">Status</TableHead>
+                <TableHead className="px-4">Date</TableHead>
+                <TableHead className="px-4" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.items.map((offer) => (
-                <tr key={offer.id} className="hover:bg-mist">
-                  <td className="px-4 py-3 text-[13px] font-medium text-ink">{offerApplicantName(offer)}</td>
-                  <td className="px-4 py-3 text-[13px] font-medium tabular-nums text-ink">
+                <TableRow key={offer.id}>
+                  <TableCell className="px-4 py-3 text-[13px] font-medium text-foreground">{offerApplicantName(offer)}</TableCell>
+                  <TableCell className="px-4 py-3 text-[13px] font-medium tabular-nums text-foreground">
                     {formatCurrency(offer.amount, offer.currency)}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
                     <Badge status={offer.status}>{titleCase(offer.status)}</Badge>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-[13px] text-inkmuted">{formatDate(offer.date)}</td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-[13px] text-muted-foreground">{formatDate(offer.date)}</TableCell>
+                  <TableCell className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
                       <Button size="sm" variant="secondary" onClick={() => setEditingOffer(offer)}>
                         Edit
@@ -88,11 +92,17 @@ export default function OffersTab({ propertyId }) {
                         </Button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
+          <Pagination
+            page={page}
+            totalPages={data.totalPageCount}
+            totalCount={data.totalCount}
+            onPageChange={setPage}
+          />
         </div>
       )}
 

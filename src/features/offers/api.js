@@ -8,7 +8,8 @@ export function usePropertyOffers(propertyId, { page = 1, pageSize = 20 } = {}) 
     queryKey: ['offers', propertyId, { page, pageSize, baseUrl: api.baseUrl }],
     queryFn: () =>
       api.getPaged(
-        `/offers/${buildQuery({ propertyId, pageNumber: page, pageSize })}`,
+        // sortBy=-amount: highest offer first.
+        `/offers/${buildQuery({ propertyId, pageNumber: page, pageSize, sortBy: '-amount' })}`,
       ),
     enabled: !!propertyId,
   });
