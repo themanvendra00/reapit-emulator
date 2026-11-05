@@ -4,7 +4,8 @@ import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
 import { Input, Label, Select, Textarea } from '../../components/ui/Field.jsx';
 import { useUpdateProperty } from '../../features/properties/api.js';
-import { titleCase } from '../../lib/format.js';
+import { useVendorOptions } from '../../features/vendors/api.js';
+import { titleCase, vendorDisplayName } from '../../lib/format.js';
 
 const SELLING_STATUSES = [
   'preAppraisal',
@@ -22,6 +23,7 @@ const SELLING_STATUSES = [
 
 export default function PropertyEditModal({ property, open, onClose }) {
   const updateProperty = useUpdateProperty();
+  const { data: vendorOptions } = useVendorOptions();
   const [form, setForm] = useState(null);
 
   useEffect(() => {
@@ -29,6 +31,8 @@ export default function PropertyEditModal({ property, open, onClose }) {
       setForm({
         status: property.selling?.status || '',
         price: property.selling?.price ?? '',
+        vendorId: property.selling?.vendorId || '',
+        berRating: property.regional?.irl?.buildingEnergyRating?.rating || '',
         negotiatorId: property.negotiatorId || '',
         strapline: property.strapline || '',
         description: property.description || '',
@@ -42,10 +46,26 @@ export default function PropertyEditModal({ property, open, onClose }) {
 
   const handleSave = async () => {
     if (!form) return;
+    // The emulator replaces nested objects (selling, regional, etc.) wholesale
+    // on PATCH rather than merging field-by-field, so we have to spread the
+    // existing nested object back in or unedited fields (tenure, fee,
+    // vendorId, refNumber, epi, etc.) get silently dropped.
     const body = {
       selling: {
+        ...property.selling,
         status: form.status || undefined,
         price: form.price === '' ? undefined : Number(form.price),
+        vendorId: form.vendorId || undefined,
+      },
+      regional: {
+        ...property.regional,
+        irl: {
+          ...property.regional?.irl,
+          buildingEnergyRating: {
+            ...property.regional?.irl?.buildingEnergyRating,
+            rating: form.berRating || undefined,
+          },
+        },
       },
       negotiatorId: form.negotiatorId || undefined,
       strapline: form.strapline || undefined,
@@ -115,6 +135,30 @@ export default function PropertyEditModal({ property, open, onClose }) {
               id="negotiatorId"
               value={form.negotiatorId}
               onChange={(e) => setForm({ ...form, negotiatorId: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="vendorId">Vendor</Label>
+            <Select
+              id="vendorId"
+              value={form.vendorId}
+              onChange={(e) => setForm({ ...form, vendorId: e.target.value })}
+            >
+              <option value="">—</option>
+              {(vendorOptions?.items || []).map((v) => (
+                <option key={v.id} value={v.id}>
+                  {vendorDisplayName(v)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="berRating">BER rating</Label>
+            <Input
+              id="berRating"
+              placeholder="e.g. C3"
+              value={form.berRating}
+              onChange={(e) => setForm({ ...form, berRating: e.target.value.toUpperCase() })}
             />
           </div>
         </div>
