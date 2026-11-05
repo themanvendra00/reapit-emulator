@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import Modal from '../../components/ui/Modal.jsx';
 import Button from '../../components/ui/Button.jsx';
-import { Input, Label, Select, Textarea } from '../../components/ui/Field.jsx';
+import { Input, Label, Select } from '../../components/ui/Field.jsx';
 import { useUpdateProperty } from '../../features/properties/api.js';
 import { useVendorOptions } from '../../features/vendors/api.js';
 import { titleCase, vendorDisplayName } from '../../lib/format.js';
@@ -14,6 +14,7 @@ const SELLING_STATUSES = [
   'forSale',
   'forSaleUnavailable',
   'underOffer',
+  'underOfferUnavailable',
   'reserved',
   'exchanged',
   'completed',
@@ -34,8 +35,6 @@ export default function PropertyEditModal({ property, open, onClose }) {
         vendorId: property.selling?.vendorId || '',
         berRating: property.regional?.irl?.buildingEnergyRating?.rating || '',
         negotiatorId: property.negotiatorId || '',
-        strapline: property.strapline || '',
-        description: property.description || '',
         bedrooms: property.bedrooms ?? '',
         bathrooms: property.bathrooms ?? '',
         receptions: property.receptions ?? '',
@@ -68,8 +67,6 @@ export default function PropertyEditModal({ property, open, onClose }) {
         },
       },
       negotiatorId: form.negotiatorId || undefined,
-      strapline: form.strapline || undefined,
-      description: form.description || undefined,
       bedrooms: form.bedrooms === '' ? undefined : Number(form.bedrooms),
       bathrooms: form.bathrooms === '' ? undefined : Number(form.bathrooms),
       receptions: form.receptions === '' ? undefined : Number(form.receptions),
@@ -204,25 +201,6 @@ export default function PropertyEditModal({ property, open, onClose }) {
               onChange={(e) => setForm({ ...form, parkingSpaces: e.target.value })}
             />
           </div>
-        </div>
-
-        <div>
-          <Label htmlFor="strapline">Strapline</Label>
-          <Input
-            id="strapline"
-            value={form.strapline}
-            onChange={(e) => setForm({ ...form, strapline: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            rows={4}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
         </div>
       </div>
     </Modal>
