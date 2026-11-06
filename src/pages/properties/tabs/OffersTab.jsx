@@ -159,6 +159,21 @@ function OfferFormModal({ mode, propertyId, offer, open, onClose }) {
     }
   }, [isEdit, offer, open]);
 
+  function dateWithCurrentTime(dateStr) {
+    if (!dateStr) return undefined;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const now = new Date();
+    return new Date(
+      year,
+      month - 1,
+      day,
+      now.getHours(),
+      now.getMinutes(),
+      now.getSeconds(),
+      now.getMilliseconds(),
+    ).toISOString();
+  }
+
   function emptyForm() {
     return {
       applicantId: '',
@@ -189,7 +204,7 @@ function OfferFormModal({ mode, propertyId, offer, open, onClose }) {
           body: {
             negotiatorId: form.negotiatorId || undefined,
             amount: Number(form.amount),
-            date: form.date ? new Date(form.date).toISOString() : undefined,
+            date: dateWithCurrentTime(form.date),
             status: form.status,
             inclusions: form.inclusions || undefined,
             exclusions: form.exclusions || undefined,
@@ -202,7 +217,7 @@ function OfferFormModal({ mode, propertyId, offer, open, onClose }) {
           applicantId: form.applicantId.trim(),
           negotiatorId: form.negotiatorId || undefined,
           amount: Number(form.amount),
-          date: form.date ? new Date(form.date).toISOString() : undefined,
+          date: dateWithCurrentTime(form.date),
           status: form.status,
           inclusions: form.inclusions || undefined,
           exclusions: form.exclusions || undefined,
