@@ -17,14 +17,51 @@ import { formatDate, titleCase } from '../../../lib/format.js';
 
 const STATUSES = ['needed', 'arranging', 'completed', 'notNeeded'];
 
+const DEFAULT_CHECKS = [
+  { description: 'Confirmation of Instruction', type: 'preInstruction', status: 'completed' },
+  { description: 'Sign Terms & Conditions', type: 'preInstruction', status: 'needed' },
+  { description: 'Proof of ID & Address', type: 'preInstruction', status: 'needed' },
+  { description: 'Prepaid Advertising', type: 'preInstruction', status: 'needed' },
+  { description: 'BER Rating Certificate', type: 'preInstruction', status: 'needed' },
+  { description: 'BER Advisory Report', type: 'preInstruction', status: 'needed' },
+  { description: 'Property Description', type: 'preInstruction', status: 'needed' },
+  { description: 'Photos & Videos', type: 'preInstruction', status: 'needed' },
+  { description: 'Solicitor Details', type: 'preInstruction', status: 'needed' },
+  { description: 'Service Charges', type: 'preInstruction', status: 'needed' },
+  { description: 'Rents & Yields', type: 'preInstruction', status: 'needed' },
+  { description: 'Certificates & Documents', type: 'preInstruction', status: 'needed' },
+];
+
 export default function ChecksTab({ propertyId }) {
   const { data, isLoading, isError, error, refetch } = usePropertyChecks(propertyId);
+  const createCheck = useCreatePropertyCheck(propertyId);
   const updateCheck = useUpdatePropertyCheck(propertyId);
   const deleteCheck = useDeletePropertyCheck(propertyId);
 
   const [addOpen, setAddOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [loadingChecks, setLoadingChecks] = useState(false);
+
+  const handleLoadChecks = async () => {
+    setLoadingChecks(true);
+    try {
+      let successCount = 0;
+      for (const check of DEFAULT_CHECKS) {
+        try {
+          await createCheck.mutateAsync(check);
+          successCount += 1;
+        } catch (err) {
+          toast.error(`Failed to create "${check.description}": ${err.message}`);
+        }
+      }
+      if (successCount > 0) {
+        toast.success(`Loaded ${successCount} of ${DEFAULT_CHECKS.length} checks`);
+      }
+    } finally {
+      setLoadingChecks(false);
+    }
+  };
 
   const handleStatusSave = async (check) => {
     const status = pendingStatus[check.id] ?? check.status;
@@ -50,7 +87,10 @@ export default function ChecksTab({ propertyId }) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-end gap-2">
+        <Button variant="secondary" onClick={handleLoadChecks} loading={loadingChecks}>
+          Load checks
+        </Button>
         <Button onClick={() => setAddOpen(true)}>+ Add check</Button>
       </div>
 
